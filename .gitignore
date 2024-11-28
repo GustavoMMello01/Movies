@@ -59,3 +59,7 @@ firebase-debug.log
 # Outras pastas e arquivos que não devem ser versionados
 coverage/
 public/
+
+.firebase
+
+.github/workflows
