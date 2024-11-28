@@ -1,37 +1,33 @@
 import React, { useState } from "react";
-import { loginWithGoogle, logout, auth, fetchLiveCollection } from "./firebaseConfig";
-import { onAuthStateChanged } from "firebase/auth";
+import Login from "./pages/Login";
+import Home from "./pages/Home";
+import { logout } from "./services/authService";
 
 function App() {
   const [user, setUser] = useState(null);
 
-  React.useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        console.log("Usuário autenticado:", currentUser.displayName);
-        await fetchLiveCollection(); // Chama a função para buscar os dados
-      }
-    });
-    return () => unsubscribe();
-  }, []);
+  // Função para gerenciar login
+  const handleLogin = (loggedInUser) => {
+    setUser(loggedInUser);
+  };
+
+  // Função para gerenciar logout
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setUser(null);
+    } catch (error) {
+      console.error("Erro ao fazer logout:", error);
+    }
+  };
 
   return (
-    <div style={{ textAlign: "center", marginTop: "50px" }}>
-      <h1>React + Firebase</h1>
-      {!user ? (
-        <button onClick={loginWithGoogle}>Login com Google</button>
+    <div className="min-h-screen bg-gray-100">
+      {/* Renderiza Login ou Home com base no estado do usuário */}
+      {user ? (
+        <Home user={user} onLogout={handleLogout} />
       ) : (
-        <div>
-          <h2>Bem-vindo, {user.displayName}!</h2>
-          <img
-            src={user.photoURL}
-            alt="Foto do usuário"
-            style={{ borderRadius: "50%", width: "100px" }}
-          />
-          <p>Email: {user.email}</p>
-          <button onClick={logout}>Logout</button>
-        </div>
+        <Login onLogin={handleLogin} />
       )}
     </div>
   );
