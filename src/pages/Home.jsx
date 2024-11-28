@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { fetchCollection, addDocument } from "../services/firestoreService";
 import { useAuth } from "../hooks/AuthContext";
 import { useNavigate } from "react-router-dom";
+import Header from "../components/Header"; // Importa o Header
 
 const Home = () => {
   const { user, logout } = useAuth(); // Obtém o usuário e a função de logout do contexto
@@ -48,30 +49,13 @@ const Home = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-100">
-      {/* Cabeçalho minimalista */}
-      <header className="p-4 bg-white shadow-md flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <img
-            src={user.photoURL || "/default-avatar.png"} // Foto do usuário
-            alt="User Avatar"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-          <span className="text-gray-800 font-medium">
-            Olá, {user.displayName || "Usuário"}!
-          </span>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-gray-600 bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
-        >
-          Logout
-        </button>
-      </header>
+    <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
+      {/* Usa o componente Header */}
+      <Header onLogout={handleLogout} />
 
       {/* Conteúdo principal */}
       <main className="flex-grow p-4">
-        <h1 className="text-2xl font-bold text-gray-800 mb-4">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">
           Minha Lista de Filmes
         </h1>
         <div className="flex items-center space-x-2 mb-4">
@@ -80,7 +64,7 @@ const Home = () => {
             value={newMovie}
             onChange={(e) => setNewMovie(e.target.value)}
             placeholder="Adicione um filme"
-            className="flex-grow border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            className="flex-grow border border-gray-300 dark:border-gray-700 rounded px-4 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600"
           />
           <button
             onClick={addMovie}
@@ -93,9 +77,9 @@ const Home = () => {
           {movies.map((movie) => (
             <li
               key={movie.id}
-              className="bg-white shadow p-4 rounded flex justify-between items-center"
+              className="bg-white dark:bg-gray-800 shadow p-4 rounded flex justify-between items-center"
             >
-              <span className="text-gray-800">{movie.title}</span>
+              <span className="text-gray-800 dark:text-gray-100">{movie.title}</span>
             </li>
           ))}
         </ul>
