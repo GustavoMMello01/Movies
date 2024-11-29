@@ -5,6 +5,7 @@ import Home from "../pages/Home";
 import PrivateRoute from "./PrivateRoute";
 import Profile from "../pages/Profile";
 import UserProfile from "../pages/UserProfile";
+import ListEdit from "../pages/ListEdit";
 
 const AppRoutes = () => {
   return (
@@ -39,6 +40,15 @@ const AppRoutes = () => {
           element={
             <PrivateRoute>
               <UserProfile />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/list/:listId"
+          element={
+            <PrivateRoute>
+              <ListEdit />
             </PrivateRoute>
           }
         />

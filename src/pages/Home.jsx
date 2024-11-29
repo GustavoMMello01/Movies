@@ -1,78 +1,72 @@
-import React, { useEffect, useRef, useState } from "react";
-import { fetchCollection, fetchUsers } from "../services/firestoreService";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../hooks/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Header from "../components/Header"; 
 import WelcomeBanner from "../components/WelcomeBanner";
+import { createMovieList, fetchUserMovieLists, followMovieList, unfollowMovieList } from "../services/movieService";
 
 const Home = () => {
   const { user, logout } = useAuth(); // Obtém o usuário e a função de logout do contexto
   const navigate = useNavigate();
-  const [movies, setMovies] = useState([]);
-  const [newMovie, setNewMovie] = useState("");
-  const [search, setSearch] = useState(""); // Input de busca de usuários
-  const [users, setUsers] = useState([]); // Lista de usuários filtrados
 
-  const searchRef = useRef(); // Referência para o input de busca
+  const [userLists, setUserLists] = useState([]); // Listas do próprio usuário
+  const [newListTitle, setNewListTitle] = useState(""); // Título para criar uma nova lista
+  const [newListDescription, setNewListDescription] = useState(""); // Descrição da nova lista
 
   useEffect(() => {
     if (!user) {
       navigate("/login");
     } else {
-      fetchMovies();
+      fetchLists(); // Busca as listas do usuário
     }
   }, [user, navigate]);
 
-  const fetchMovies = async () => {
+  const fetchLists = async () => {
     try {
-      const data = await fetchCollection("movies");
-      setMovies(data);
+      const lists = await fetchUserMovieLists(user.uid); // Busca listas do próprio usuário
+      setUserLists(lists);
     } catch (error) {
-      console.error("Erro ao buscar filmes:", error);
+      console.error("Erro ao buscar listas do usuário:", error);
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    navigate("/login");
-  };
-
-  const searchUsers = async (query) => {
-    setSearch(query);
-
-    if (query.trim() === "") {
-      setUsers([]); // Limpa a lista se o input estiver vazio
+  const handleCreateList = async () => {
+    if (!newListTitle || !newListDescription) {
+      alert("Por favor, preencha todos os campos!");
       return;
     }
 
     try {
-      const allUsers = await fetchUsers(); // Busca todos os usuários
-      const filtered = allUsers.filter((u) =>
-        u.displayName.toLowerCase().includes(query.toLowerCase())
-      );
-      setUsers(filtered); // Atualiza a lista de usuários com os resultados filtrados
+      await createMovieList(newListTitle, newListDescription, user.uid);
+      setNewListTitle("");
+      setNewListDescription("");
+      fetchLists(); // Atualiza as listas após criar uma nova
     } catch (error) {
-      console.error("Erro ao buscar usuários:", error);
+      console.error("Erro ao criar lista:", error);
     }
   };
 
-  const handleUserClick = (userId) => {
-    navigate(`/profile/${userId}`); // Redireciona para a página de perfil
+  const handleFollowList = async (listId) => {
+    try {
+      await followMovieList(user.uid, listId);
+      alert("Você seguiu esta lista!");
+    } catch (error) {
+      console.error("Erro ao seguir a lista:", error);
+    }
   };
 
-  // Fecha a lista de resultados ao clicar fora
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
-        setUsers([]); // Fecha a lista
-      }
-    };
+  const handleUnfollowList = async (listId) => {
+    try {
+      await unfollowMovieList(user.uid, listId);
+      alert("Você deixou de seguir esta lista!");
+    } catch (error) {
+      console.error("Erro ao deixar de seguir a lista:", error);
+    }
+  };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  const handleEditList = (listId) => {
+    navigate(`/list/${listId}`); // Redireciona para a página de edição da lista
+  };
 
   if (!user) {
     return null;
@@ -80,68 +74,76 @@ const Home = () => {
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
-      <Header onLogout={handleLogout} />
+      <Header onLogout={logout} />
       <main className="flex-grow p-4">
         <WelcomeBanner
           title={`Bem vindo, ${user.displayName || "Usuário"}!`}
-          text="Adicione suas obras favoritas, conecte-se com amigos e descubra o que eles estão assistindo"
+          text="Gerencie suas listas de filmes, compartilhe com amigos e acompanhe as listas que você segue."
         />
 
-        {/* Input para buscar usuários */}
-        <div className="mb-6 relative" ref={searchRef}>
+        {/* Formulário para criar nova lista */}
+        <div className="bg-white dark:bg-gray-800 p-4 rounded shadow mb-6">
+          <h2 className="text-lg font-bold mb-2 text-gray-800 dark:text-gray-100">
+            Criar Nova Lista
+          </h2>
           <input
             type="text"
-            value={search}
-            onChange={(e) => searchUsers(e.target.value)}
-            placeholder="Busque por amigos..."
-            className="w-full border border-gray-300 dark:border-gray-700 rounded px-4 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600"
+            value={newListTitle}
+            onChange={(e) => setNewListTitle(e.target.value)}
+            placeholder="Título da Lista"
+            className="w-full mb-2 p-2 border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100"
           />
+          <textarea
+            value={newListDescription}
+            onChange={(e) => setNewListDescription(e.target.value)}
+            placeholder="Descrição da Lista"
+            className="w-full mb-2 p-2 border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100"
+          />
+          <div className="flex justify-end">
+            <button
+              onClick={handleCreateList}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              Criar Lista
+            </button>
+          </div>
+        </div>
 
-          {/* Lista de resultados da busca */}
-          {users.length > 0 && (
-            <ul className="absolute left-0 mt-2 w-full bg-white dark:bg-gray-800 shadow-lg rounded max-h-40 overflow-y-auto z-10">
-              {users.map((u) => (
+        {/* Listas do próprio usuário */}
+        <div className="mb-6">
+          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+            Minhas Listas
+          </h2>
+          {userLists.length > 0 ? (
+            <ul className="mt-2 space-y-2">
+              {userLists.map((list) => (
                 <li
-                  key={u.uid}
-                  className="px-4 py-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700 dark:text-white"
-                  onClick={() => handleUserClick(u.uid)}
+                  key={list.id}
+                  className="bg-white dark:bg-gray-800 p-4 rounded shadow flex justify-between items-center"
                 >
-                  {u.displayName}
+                  <div>
+                    <h3 className="font-bold text-gray-800 dark:text-gray-100">
+                      {list.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {list.description}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleEditList(list.id)}
+                    className="text-blue-500 hover:underline"
+                  >
+                    Editar
+                  </button>
                 </li>
               ))}
             </ul>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400">
+              Você ainda não criou nenhuma lista.
+            </p>
           )}
         </div>
-
-        {/* Input e lista de filmes */}
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">
-          Minha Lista de Filmes
-        </h1>
-        <div className="flex items-center space-x-2 mb-4">
-          <input
-            type="text"
-            value={newMovie}
-            onChange={(e) => setNewMovie(e.target.value)}
-            placeholder="Adicione um filme"
-            className="flex-grow border border-gray-300 dark:border-gray-700 rounded px-4 py-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:focus:ring-blue-600"
-          />
-          <button
-            onClick={() => {}}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Adicionar
-          </button>
-        </div>
-        <ul className="space-y-2">
-          {movies.map((movie) => (
-            <li
-              key={movie.id}
-              className="bg-white dark:bg-gray-800 shadow p-4 rounded flex justify-between items-center"
-            >
-              <span className="text-gray-800 dark:text-gray-100">{movie.title}</span>
-            </li>
-          ))}
-        </ul>
       </main>
     </div>
   );
