@@ -51,7 +51,7 @@ const Login = () => {
         <div className="text-center mb-8">
           {/* Título do app */}
           <h1 className="text-4xl font-extrabold text-blue-500 dark:text-blue-400 mb-2">
-            FlixReview
+            MMFlix
           </h1>
           {/* Descrição do app */}
           <p className="text-gray-700 dark:text-gray-300 text-lg px-10">

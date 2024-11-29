@@ -36,3 +36,19 @@ export const deleteDocument = async (collectionName, id) => {
     throw error;
   }
 };
+
+// Busca todos os usuários da coleção 'users'
+export const fetchUsers = async () => {
+  try {
+    const querySnapshot = await getDocs(collection(db, "users"));
+    const users = [];
+    querySnapshot.forEach((doc) => {
+      users.push({ id: doc.id, ...doc.data() }); // Pega o ID do documento e os dados
+    });
+    return users;
+  } catch (error) {
+    console.error("Erro ao buscar usuários:", error);
+    throw error;
+  }
+};
+
