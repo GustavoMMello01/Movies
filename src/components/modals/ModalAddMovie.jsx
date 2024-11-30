@@ -64,6 +64,22 @@ const ModalAddMovie = ({
             placeholder="Ano do Filme"
             className="w-full mb-2 p-2 border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100"
           />
+          <input
+            type="text"
+            name="country"
+            value={form.country}
+            onChange={onInputChange}
+            placeholder="País do Filme"
+            className="w-full mb-2 p-2 border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100"
+          />
+          <input
+            type="number"
+            name="duration"
+            value={form.duration}
+            onChange={onInputChange}
+            placeholder="Duração (minutos)"
+            className="w-full mb-2 p-2 border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100"
+          />
           <textarea
             name="comment"
             value={form.comment}
