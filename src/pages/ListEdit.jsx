@@ -1,19 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Header from "../components/Header";
 import ModalAddMovie from "../components/modals/ModalAddMovie";
+import ModalConfirmDelete from "../components/modals/ModalConfirmDelete";
 import toast from "react-hot-toast";
 import {
   fetchMoviesFromList,
   addMovieToList,
   updateMovieInList,
   removeMovieFromList,
+  deleteMovieList,
 } from "../services/movieService";
 
 const ListEdit = () => {
   const { listId } = useParams();
+  const navigate = useNavigate();
   const [movies, setMovies] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false); // Estado do modal de confirmação
   const [form, setForm] = useState({
     title: "",
     rating: 0,
@@ -94,25 +98,52 @@ const ListEdit = () => {
   };
 
   const handleRemoveMovie = async (movieId) => {
-    if (window.confirm("Tem certeza que deseja remover este filme?")) {
-      try {
-        await removeMovieFromList(listId, movieId);
-        toast.success("Filme removido com sucesso!");
-        fetchMovies();
-      } catch (error) {
-        console.error("Erro ao remover filme:", error);
-        toast.error("Erro ao remover filme!");
-      }
+    try {
+      await removeMovieFromList(listId, movieId);
+      toast.success("Filme removido com sucesso!");
+      fetchMovies();
+    } catch (error) {
+      console.error("Erro ao remover filme:", error);
+      toast.error("Erro ao remover filme!");
     }
+  };
+
+  const handleDeleteList = async () => {
+    try {
+      await deleteMovieList(listId);
+      toast.success("Lista removida com sucesso!");
+      navigate("/"); // Redireciona para a Home após remover a lista
+    } catch (error) {
+      console.error("Erro ao remover lista:", error);
+      toast.error("Erro ao remover lista!");
+    } finally {
+      setIsConfirmModalOpen(false); // Fecha o modal de confirmação
+    }
+  };
+
+  const handleOpenConfirmModal = () => {
+    setIsConfirmModalOpen(true); // Abre o modal de confirmação
+  };
+
+  const handleCloseConfirmModal = () => {
+    setIsConfirmModalOpen(false); // Fecha o modal de confirmação
   };
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
       <Header />
       <main className="flex-grow p-4">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6">
-          Editar Lista de Filmes
-        </h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
+            Editar Lista de Filmes
+          </h1>
+          <button
+            onClick={handleOpenConfirmModal} // Abre o modal de confirmação
+            className="text-red-500 hover:text-red-700"
+          >
+            Remover Lista
+          </button>
+        </div>
 
         <div className="mb-4">
           <button
@@ -187,6 +218,14 @@ const ListEdit = () => {
         genres={genres}
         onInputChange={handleInputChange}
         onAdd={handleAddMovie}
+      />
+
+      {/* Modal de confirmação para excluir a lista */}
+      <ModalConfirmDelete
+        isOpen={isConfirmModalOpen}
+        onClose={handleCloseConfirmModal} // Fecha o modal
+        onConfirm={handleDeleteList} // Confirma a exclusão da lista
+        text="Tem certeza que deseja remover esta lista? Todos os filmes associados serão excluídos permanentemente."
       />
     </div>
   );
