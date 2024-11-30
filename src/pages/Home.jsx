@@ -5,9 +5,12 @@ import Header from "../components/Header";
 import WelcomeBanner from "../components/WelcomeBanner";
 import ModalCreateList from "../components/modals/ModalCreateList";
 import ModalConfirmDelete from "../components/modals/ModalConfirmDelete";
+import ModalEditCommunity from "../components/modals/ModalEditCommunity"; // Importa o ModalEditCommunity
 import toast from "react-hot-toast";
 import { createMovieList, fetchUserMovieLists, fetchMoviesFromList, deleteMovieList } from "../services/movieService";
+import { fetchFriends } from "../services/communityService";
 import { FaTimes } from "react-icons/fa";
+import default_avatar from '../assets/default_avatar.png'
 
 const Home = () => {
   const { user, logout } = useAuth();
@@ -15,9 +18,11 @@ const Home = () => {
 
   const [userLists, setUserLists] = useState([]);
   const [listMoviesCount, setListMoviesCount] = useState({});
+  const [friends, setFriends] = useState([]);
+  const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false); // Estado do modal de amigos
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false); // Estado do modal de confirmação
-  const [selectedListId, setSelectedListId] = useState(null); // ID da lista a ser deletada
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [selectedListId, setSelectedListId] = useState(null);
   const [newListTitle, setNewListTitle] = useState("");
   const [newListDescription, setNewListDescription] = useState("");
 
@@ -26,6 +31,7 @@ const Home = () => {
       navigate("/login");
     } else {
       fetchLists();
+      fetchFriendsList();
     }
   }, [user, navigate]);
 
@@ -42,6 +48,15 @@ const Home = () => {
       setListMoviesCount(moviesCount);
     } catch (error) {
       console.error("Erro ao buscar listas do usuário:", error);
+    }
+  };
+
+  const fetchFriendsList = async () => {
+    try {
+      const friendsList = await fetchFriends(user.uid);
+      setFriends(friendsList);
+    } catch (error) {
+      console.error("Erro ao buscar amigos:", error);
     }
   };
 
@@ -75,7 +90,7 @@ const Home = () => {
       await deleteMovieList(selectedListId);
       toast.success("Lista removida com sucesso!");
       fetchLists();
-      setIsConfirmModalOpen(false); // Fecha o modal após a remoção
+      setIsConfirmModalOpen(false);
       setSelectedListId(null);
     } catch (error) {
       console.error("Erro ao remover lista:", error);
@@ -88,8 +103,16 @@ const Home = () => {
     setIsConfirmModalOpen(true);
   };
 
+  const navigateToProfile = () => {
+    navigate("/profile/me");
+  };
+
+  const navigateToFriendProfile = (friendId) => {
+    navigate(`/profile/${friendId}`);
+  };
+
   return (
-    <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
       <Header onLogout={logout} />
       <main className="flex-grow p-4">
         <WelcomeBanner
@@ -110,49 +133,86 @@ const Home = () => {
             </button>
           </div>
           {userLists.length > 0 ? (
-            <ul className="mt-2 space-y-2">
-              {userLists.map((list) => (
-                <li
-                  key={list.id}
-                  className="bg-white dark:bg-gray-800 p-4 rounded shadow flex justify-between items-center"
-                >
-                  <div className="flex-1 mr-4">
-                    <h3 className="font-bold text-gray-800 dark:text-gray-100">
-                      {list.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {list.description}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-300">
-                      {listMoviesCount[list.id] || 0} filme(s)
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <button
-                      onClick={() => handleEditList(list.id)}
-                      className="text-blue-500 hover:underline"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => openConfirmModal(list.id)} // Abre o modal de confirmação
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <FaTimes />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div>
+              <ul className="mt-2 space-y-2">
+                {userLists.slice(0, 5).map((list) => (
+                  <li
+                    key={list.id}
+                    className="bg-white dark:bg-gray-800 p-4 rounded shadow flex justify-between items-center"
+                  >
+                    <div className="flex-1 mr-4">
+                      <h3 className="font-bold text-gray-800 dark:text-gray-100">
+                        {list.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {list.description}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-300">
+                        {listMoviesCount[list.id] || 0} filme(s)
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <button
+                        onClick={() => handleEditList(list.id)}
+                        className="text-blue-500 hover:underline"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => openConfirmModal(list.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <FaTimes />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {userLists.length > 5 && (
+                <div className="text-center mt-4">
+                  <button
+                    onClick={navigateToProfile}
+                    className="text-blue-500 hover:underline"
+                  >
+                    Ver todas as listas
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <p className="text-gray-600 dark:text-gray-400">
               Você ainda não criou nenhuma lista.
             </p>
           )}
         </div>
+
+        {/* Seção de Amigos */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center my-6">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+              Amigos
+            </h2>
+            <button
+              onClick={() => setIsFriendsModalOpen(true)}
+              className="text-blue-500 hover:underline"
+            >
+              Ver mais
+            </button>
+          </div>
+          <div className="flex space-x-4 overflow-x-auto">
+            {friends.slice(0, 5).map((friend) => (
+              <img
+                key={friend.uid}
+                src={friend.photoURL || default_avatar}
+                alt={friend.displayName}
+                className="w-12 h-12 rounded-full object-cover cursor-pointer"
+                onClick={() => navigateToFriendProfile(friend.uid)}
+              />
+            ))}
+          </div>
+        </div>
       </main>
 
-      {/* Modal para criar nova lista */}
       <ModalCreateList
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -163,12 +223,19 @@ const Home = () => {
         onCreate={handleCreateList}
       />
 
-      {/* Modal para confirmação de exclusão */}
       <ModalConfirmDelete
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
         onConfirm={handleDeleteList}
         text="Tem certeza que deseja remover esta lista? Esta ação não pode ser desfeita."
+      />
+
+      {/* Modal para Editar Amigos */}
+      <ModalEditCommunity
+        isOpen={isFriendsModalOpen}
+        onClose={() => setIsFriendsModalOpen(false)}
+        userId={user.uid}
+        onUpdateFriends={fetchFriendsList}
       />
     </div>
   );

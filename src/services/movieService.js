@@ -64,7 +64,11 @@ export const fetchUserMovieLists = async (ownerId) => {
  */
 export const fetchMoviesFromList = async (listId) => {
   try {
-    const moviesSnapshot = await getDocs(collection(db, `movieLists/${listId}/movies`));
+    // Acessa a subcoleção "movies" dentro de um documento específico de "movieLists"
+    const moviesRef = collection(db, "movieLists", listId, "movies");
+    const moviesSnapshot = await getDocs(moviesRef);
+
+    // Mapeia os documentos encontrados para um array
     const movies = moviesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     return movies;
   } catch (error) {
@@ -72,6 +76,7 @@ export const fetchMoviesFromList = async (listId) => {
     throw error;
   }
 };
+
 
 /**
  * Remove um filme específico de uma lista.
