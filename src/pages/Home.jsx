@@ -1,30 +1,41 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../hooks/AuthContext";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header"; 
+import Header from "../components/Header";
 import WelcomeBanner from "../components/WelcomeBanner";
-import { createMovieList, fetchUserMovieLists, followMovieList, unfollowMovieList } from "../services/movieService";
+import ModalCreateList from "../components/modals/ModalCreateList"; // Importa o ModalCreateList
+import toast from "react-hot-toast";
+import { createMovieList, fetchUserMovieLists, fetchMoviesFromList } from "../services/movieService";
 
 const Home = () => {
-  const { user, logout } = useAuth(); // Obtém o usuário e a função de logout do contexto
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [userLists, setUserLists] = useState([]); // Listas do próprio usuário
-  const [newListTitle, setNewListTitle] = useState(""); // Título para criar uma nova lista
-  const [newListDescription, setNewListDescription] = useState(""); // Descrição da nova lista
+  const [userLists, setUserLists] = useState([]);
+  const [listMoviesCount, setListMoviesCount] = useState({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newListTitle, setNewListTitle] = useState("");
+  const [newListDescription, setNewListDescription] = useState("");
 
   useEffect(() => {
     if (!user) {
       navigate("/login");
     } else {
-      fetchLists(); // Busca as listas do usuário
+      fetchLists();
     }
   }, [user, navigate]);
 
   const fetchLists = async () => {
     try {
-      const lists = await fetchUserMovieLists(user.uid); // Busca listas do próprio usuário
+      const lists = await fetchUserMovieLists(user.uid);
       setUserLists(lists);
+
+      const moviesCount = {};
+      for (const list of lists) {
+        const movies = await fetchMoviesFromList(list.id);
+        moviesCount[list.id] = movies.length;
+      }
+      setListMoviesCount(moviesCount);
     } catch (error) {
       console.error("Erro ao buscar listas do usuário:", error);
     }
@@ -32,7 +43,7 @@ const Home = () => {
 
   const handleCreateList = async () => {
     if (!newListTitle || !newListDescription) {
-      alert("Por favor, preencha todos os campos!");
+      toast.error("Por favor, preencha todos os campos!");
       return;
     }
 
@@ -40,37 +51,18 @@ const Home = () => {
       await createMovieList(newListTitle, newListDescription, user.uid);
       setNewListTitle("");
       setNewListDescription("");
-      fetchLists(); // Atualiza as listas após criar uma nova
+      setIsModalOpen(false); // Fecha o modal
+      toast.success("Lista criada com sucesso!");
+      fetchLists();
     } catch (error) {
       console.error("Erro ao criar lista:", error);
-    }
-  };
-
-  const handleFollowList = async (listId) => {
-    try {
-      await followMovieList(user.uid, listId);
-      alert("Você seguiu esta lista!");
-    } catch (error) {
-      console.error("Erro ao seguir a lista:", error);
-    }
-  };
-
-  const handleUnfollowList = async (listId) => {
-    try {
-      await unfollowMovieList(user.uid, listId);
-      alert("Você deixou de seguir esta lista!");
-    } catch (error) {
-      console.error("Erro ao deixar de seguir a lista:", error);
+      toast.error("Erro ao criar lista!");
     }
   };
 
   const handleEditList = (listId) => {
-    navigate(`/list/${listId}`); // Redireciona para a página de edição da lista
+    navigate(`/list/${listId}`);
   };
-
-  if (!user) {
-    return null;
-  }
 
   return (
     <div className="h-screen flex flex-col bg-gray-100 dark:bg-gray-900">
@@ -81,39 +73,18 @@ const Home = () => {
           text="Gerencie suas listas de filmes, compartilhe com amigos e acompanhe as listas que você segue."
         />
 
-        {/* Formulário para criar nova lista */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded shadow mb-6">
-          <h2 className="text-lg font-bold mb-2 text-gray-800 dark:text-gray-100">
-            Criar Nova Lista
-          </h2>
-          <input
-            type="text"
-            value={newListTitle}
-            onChange={(e) => setNewListTitle(e.target.value)}
-            placeholder="Título da Lista"
-            className="w-full mb-2 p-2 border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100"
-          />
-          <textarea
-            value={newListDescription}
-            onChange={(e) => setNewListDescription(e.target.value)}
-            placeholder="Descrição da Lista"
-            className="w-full mb-2 p-2 border dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100"
-          />
-          <div className="flex justify-end">
+        <div className="mb-6">
+          <div className="flex justify-between items-center my-6">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+              Minhas Listas
+            </h2>
             <button
-              onClick={handleCreateList}
+              onClick={() => setIsModalOpen(true)}
               className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             >
-              Criar Lista
+              Nova Lista
             </button>
           </div>
-        </div>
-
-        {/* Listas do próprio usuário */}
-        <div className="mb-6">
-          <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-            Minhas Listas
-          </h2>
           {userLists.length > 0 ? (
             <ul className="mt-2 space-y-2">
               {userLists.map((list) => (
@@ -127,6 +98,9 @@ const Home = () => {
                     </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {list.description}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-300">
+                      {listMoviesCount[list.id] || 0} filme(s)
                     </p>
                   </div>
                   <button
@@ -145,6 +119,17 @@ const Home = () => {
           )}
         </div>
       </main>
+
+      {/* Modal para criar nova lista */}
+      <ModalCreateList
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={newListTitle}
+        description={newListDescription}
+        onChangeTitle={(e) => setNewListTitle(e.target.value)}
+        onChangeDescription={(e) => setNewListDescription(e.target.value)}
+        onCreate={handleCreateList}
+      />
     </div>
   );
 };
