@@ -1,43 +1,45 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import Header from "../components/Header";
 import { fetchUserMovieLists, fetchMoviesFromList } from "../services/movieService";
-import { fetchUserData } from "../services/userService";
+import { fetchUserById } from "../services/userService";
 import default_avatar from "../assets/default_avatar.png";
 
 const Profile = () => {
-  const { userId } = useParams(); // ID do usuário cujos dados estão sendo exibidos
+  const { userId } = useParams(); // ID do usuário cujo perfil será exibido
   const [userData, setUserData] = useState(null); // Dados do usuário
   const [movieStats, setMovieStats] = useState({
     totalMovies: 0,
     totalHours: 0,
     avgRating: 0,
     favoriteGenre: "",
-  });
+  }); // Estatísticas dos filmes
   const [userLists, setUserLists] = useState([]); // Listas de filmes do usuário
 
-  useEffect(() => {
-    fetchProfileData();
-  }, [userId]);
-
-  const fetchProfileData = async () => {
+  // Função para buscar dados do perfil e filmes
+  const fetchProfileData = useCallback(async () => {
     try {
-      // Busca listas de filmes do usuário
+      // Busca os dados do usuário
+      const user = await fetchUserById(userId);
+      setUserData(user);
+
+      // Busca as listas de filmes do usuário
       const lists = await fetchUserMovieLists(userId);
       setUserLists(lists);
 
-      // Calcula estatísticas
+      // Calcula as estatísticas dos filmes
       const stats = await calculateMovieStats(lists);
       setMovieStats(stats);
-
-      // Busca os dados do usuário
-      const user = await fetchUserData(userId);
-      setUserData(user);
     } catch (error) {
       console.error("Erro ao buscar dados do perfil:", error);
     }
-  };
+  }, [userId]);
 
+  useEffect(() => {
+    fetchProfileData();
+  }, [fetchProfileData]);
+
+  // Função para calcular as estatísticas dos filmes
   const calculateMovieStats = async (lists) => {
     let totalMovies = 0;
     let totalHours = 0;
@@ -47,23 +49,26 @@ const Profile = () => {
 
     for (const list of lists) {
       const movies = await fetchMoviesFromList(list.id);
+
       totalMovies += movies.length;
 
-      movies.forEach((movie) => {
-        totalHours += Number(movie.duration || 0);
-        if (movie.rating) {
-          totalRatings += Number(movie.rating);
+      for (const movie of movies) {
+        const duration = Number(movie.duration || 0);
+        const rating = Number(movie.rating || 0);
+
+        totalHours += duration;
+        if (rating > 0) {
+          totalRatings += rating;
           ratingCount++;
         }
         if (movie.genre) {
           genreCount[movie.genre] = (genreCount[movie.genre] || 0) + 1;
         }
-      });
+      }
     }
 
-    // Calcula o gênero favorito
-    const favoriteGenre = Object.keys(genreCount).reduce(
-      (a, b) => (genreCount[a] > genreCount[b] ? a : b),
+    const favoriteGenre = Object.keys(genreCount).reduce((a, b) =>
+      genreCount[a] > genreCount[b] ? a : b,
       ""
     );
 
@@ -71,12 +76,16 @@ const Profile = () => {
       totalMovies,
       totalHours,
       avgRating: ratingCount ? (totalRatings / ratingCount).toFixed(1) : 0,
-      favoriteGenre,
+      favoriteGenre: favoriteGenre || "N/A",
     };
   };
 
   if (!userData) {
-    return <p className="text-gray-600 dark:text-gray-400">Carregando...</p>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-gray-800 dark:text-gray-100">Carregando...</p>
+      </div>
+    );
   }
 
   return (
@@ -101,7 +110,7 @@ const Profile = () => {
         </div>
 
         {/* Estatísticas */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 p-4 rounded shadow">
             <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">
               Filmes assistidos
@@ -131,7 +140,7 @@ const Profile = () => {
               Gênero favorito
             </h3>
             <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-              {movieStats.favoriteGenre || "N/A"}
+              {movieStats.favoriteGenre}
             </p>
           </div>
         </div>
@@ -153,6 +162,9 @@ const Profile = () => {
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {list.description}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-300">
+                    {list.movies?.length || 0} filme(s)
                   </p>
                 </li>
               ))}
