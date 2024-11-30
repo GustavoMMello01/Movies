@@ -7,10 +7,15 @@ import ModalCreateList from "../components/modals/ModalCreateList";
 import ModalConfirmDelete from "../components/modals/ModalConfirmDelete";
 import ModalEditCommunity from "../components/modals/ModalEditCommunity"; // Importa o ModalEditCommunity
 import toast from "react-hot-toast";
-import { createMovieList, fetchUserMovieLists, fetchMoviesFromList, deleteMovieList } from "../services/movieService";
+import {
+  createMovieList,
+  fetchUserMovieLists,
+  fetchMoviesFromList,
+  deleteMovieList,
+} from "../services/movieService";
 import { fetchFriends } from "../services/communityService";
 import { FaTimes } from "react-icons/fa";
-import default_avatar from '../assets/default_avatar.png'
+import default_avatar from "../assets/default_avatar.png";
 
 const Home = () => {
   const { user, logout } = useAuth();
@@ -19,7 +24,8 @@ const Home = () => {
   const [userLists, setUserLists] = useState([]);
   const [listMoviesCount, setListMoviesCount] = useState({});
   const [friends, setFriends] = useState([]);
-  const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false); // Estado do modal de amigos
+  const [friendsLists, setFriendsLists] = useState([]); // Listas de filmes dos amigos
+  const [isFriendsModalOpen, setIsFriendsModalOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [selectedListId, setSelectedListId] = useState(null);
@@ -55,6 +61,15 @@ const Home = () => {
     try {
       const friendsList = await fetchFriends(user.uid);
       setFriends(friendsList);
+
+      // Fetch movies lists for each friend
+      const friendsListsPromises = friendsList.map(async (friend) => {
+        const lists = await fetchUserMovieLists(friend.uid);
+        return { friend, lists };
+      });
+
+      const resolvedFriendsLists = await Promise.all(friendsListsPromises);
+      setFriendsLists(resolvedFriendsLists);
     } catch (error) {
       console.error("Erro ao buscar amigos:", error);
     }
@@ -109,6 +124,10 @@ const Home = () => {
 
   const navigateToFriendProfile = (friendId) => {
     navigate(`/profile/${friendId}`);
+  };
+
+  const navigateToFriendList = (listId) => {
+    navigate(`/list/${listId}`);
   };
 
   return (
@@ -186,7 +205,7 @@ const Home = () => {
           )}
         </div>
 
-        {/* Seção de Amigos */}
+        {/* Seção de Amigos */} 
         <div className="mb-6">
           <div className="flex justify-between items-center my-6">
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
@@ -211,6 +230,58 @@ const Home = () => {
             ))}
           </div>
         </div>
+
+        {/* Amigos e suas listas de filmes */}
+        <div className="mb-6">
+          <div className="flex justify-between items-center my-6">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+              Amigos e suas Listas
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {friendsLists.map(({ friend, lists }) => (
+              <div
+                key={friend.uid}
+                className="bg-white dark:bg-gray-800 p-4 rounded shadow"
+              >
+                <div
+                  className="flex items-center space-x-4 cursor-pointer"
+                  onClick={() => navigateToFriendProfile(friend.uid)}
+                >
+                  <img
+                    src={friend.photoURL || default_avatar}
+                    alt={friend.displayName}
+                    className="w-12 h-12 rounded-full object-cover"
+                  />
+                  <span className="font-bold text-gray-800 dark:text-gray-100">
+                    {friend.displayName}
+                  </span>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {lists.slice(0, 2).map((list) => (
+                    <div
+                      key={list.id}
+                      onClick={() => navigateToFriendList(list.id)}
+                      className="p-2 bg-gray-100 dark:bg-gray-700 rounded cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
+                    >
+                      <h3 className="font-bold text-gray-800 dark:text-gray-100">
+                        {list.title}
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-300">
+                        {listMoviesCount[list.id] || 0} filme(s)
+                      </p>
+                    </div>
+                  ))}
+                  {lists.length > 2 && (
+                    <p className="text-sm text-gray-500 dark:text-gray-300">
+                      +{lists.length - 2} listas
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </main>
 
       <ModalCreateList
@@ -230,7 +301,6 @@ const Home = () => {
         text="Tem certeza que deseja remover esta lista? Esta ação não pode ser desfeita."
       />
 
-      {/* Modal para Editar Amigos */}
       <ModalEditCommunity
         isOpen={isFriendsModalOpen}
         onClose={() => setIsFriendsModalOpen(false)}

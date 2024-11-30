@@ -17,7 +17,7 @@ const ListEdit = () => {
   const navigate = useNavigate();
   const [movies, setMovies] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false); // Estado do modal de confirmação
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [form, setForm] = useState({
     title: "",
     rating: 0,
@@ -166,34 +166,34 @@ const ListEdit = () => {
           </button>
         </div>
 
-        <ul className="space-y-2">
+        <ul className="space-y-4">
           {movies.map((movie) => (
             <li
               key={movie.id}
-              className="bg-white dark:bg-gray-800 p-4 rounded shadow flex justify-between items-center"
+              className="bg-white dark:bg-gray-800 p-4 rounded shadow"
             >
-              <div>
+              <div className="flex justify-between items-center">
                 <h3 className="font-bold text-gray-800 dark:text-gray-100">
                   {movie.title}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Nota: {movie.rating}/10 | Gênero: {movie.genre} | Ano: {movie.year}
-                </p>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleEditMovie(movie)}
+                    className="text-blue-500 hover:underline"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleRemoveMovie(movie.id)}
+                    className="text-red-500 hover:underline"
+                  >
+                    Remover
+                  </button>
+                </div>
               </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleEditMovie(movie)}
-                  className="text-blue-500 hover:underline"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => handleRemoveMovie(movie.id)}
-                  className="text-red-500 hover:underline"
-                >
-                  Remover
-                </button>
-              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-5">
+                Nota: {movie.rating}/10 | Gênero: {movie.genre} | Ano: {movie.year} | País: {movie.country} | Duração: {movie.duration} min
+              </p>
             </li>
           ))}
         </ul>
